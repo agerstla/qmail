@@ -91,8 +91,6 @@ stralloc addr = {0}; /* will be 0-terminated, if addrparse returns 1 */
 
 static stralloc foo = {0};
 
-static char pid_str[FMT_ULONG]="?PID?";
-
 char ssoutbuf[512];
 char sslogbuf[512];
 char sserrbuf[512];
@@ -111,6 +109,9 @@ void logit(const char* message);
 void logit2(const char* message, const char* reason);
 void flush() { substdio_flush(&ssout); }
 void out(s) char *s; { substdio_puts(&ssout,s); }
+void eflush() { substdio_flush(&sserr); }
+void eout(s) char *s; { substdio_puts(&sserr,s); }
+#define enew()	{ eout("qmail-smtpd["); eout(pid_buf); eout("]: "); }
 
 ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
 {
@@ -130,10 +131,10 @@ ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
 }
 
 void die_read(char *reason) { logit2("read failed", reason); flush(); _exit(1); }
-void die_alarm() { logit("connection timed out"); qlogenvelope("rejected","alarmtimeout","","451"); out("451 timeout (#4.4.2)\r\n"); flush(); _exit(1); }
-void die_nomem() { logit("out of memory"); qlogenvelope("rejected","out_of_memory","","421"); out("421 out of memory (#4.3.0)\r\n"); flush(); _exit(1); }
-void die_control() { logit("unable to read controls"); qlogenvelope("rejected","cannot_read_controls","","421"); out("421 unable to read controls (#4.3.0)\r\n"); flush(); _exit(1); }
-void die_ipme() { logit("unable to figure out IP address"); qlogenvelope("rejected","unknown_ip_me","","553"); out("421 unable to figure out my IP addresses (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_alarm() { enew(); eout("connection timed out\n"); eflush(); qlogenvelope("rejected","alarmtimeout","","451"); out("451 timeout (#4.4.2)\r\n"); flush(); _exit(1); }
+void die_nomem() { enew(); eout("out of memory\n"); eflush(); qlogenvelope("rejected","out_of_memory","","421"); out("421 out of memory (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_control() { enew(); eout("unable to read controls\n"); eflush(); qlogenvelope("rejected","cannot_read_controls","","421"); out("421 unable to read controls (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_ipme() { enew(); eout("unable to figure out IP address\n"); eflush(); qlogenvelope("rejected","unknown_ip_me","","553"); out("421 unable to figure out my IP addresses (#4.3.0)\r\n"); flush(); _exit(1); }
 /* rbl: start */
 /*
 void die_dnsbl(arg)
@@ -362,7 +363,8 @@ int vrtcount = 0;
 int vrtlog_do = 0;
 
 stralloc title = {0};
-char pid_buf[FMT_ULONG];
+
+static char pid_buf[FMT_ULONG]="?PID?";
 /* validrcptto.cdb: end */
 
 /* realbadrcpt: start */
@@ -1115,23 +1117,15 @@ void safelog(const char* string) {
     }
 }
 
-void pidlog()
-{
-   if (*pid_str == '?') /* not yet set from getpid() */
-     pid_str[fmt_ulong(pid_str,getpid())] = 0;
-   if (!stralloc_cats(&log_buf, pid_str)) die_nomem();
-}
-
 void logit(const char* message) {
     logit2(message, (const char*)0);
 }
 
 void logit2(const char* message, const char* reason)
 {
-  if (!stralloc_copys(&log_buf, "qmail-smtpd: ")) die_nomem();
-  if (!stralloc_cats(&log_buf, "pid ")) die_nomem();
-  pidlog();
-  if (!stralloc_catb(&log_buf, ": ", 2)) die_nomem();
+  if (!stralloc_copys(&log_buf, "qmail-smtpd[")) die_nomem();
+  if (!stralloc_cats(&log_buf,pid_buf)) die_nomem();   
+  if (!stralloc_catb(&log_buf, "]: ", 3)) die_nomem();
   safelog(message);
   if (reason) {
       if (!stralloc_cats(&log_buf, " (")) die_nomem();
@@ -1444,6 +1438,7 @@ void smtp_rcpt(arg) char *arg; {
 /* qregex: start */
     if (brtlimit && (brtcount >= brtlimit)) {
       strerr_warn3(title.s,"badrcptto: excessive rcptto violations hanging up on ",remoteip,0);
+      logit("too many bad RCPT");
       die_brtlimit();
     }
 
@@ -1556,7 +1551,7 @@ void smtp_rcpt(arg) char *arg; {
     }
 
     if ( (rcres == 0) || (rcres == 3) ) {
-      logit2("rcpt check error");
+      logit2("RCPT check failed");
       out(rcptcheck_err); flush();
       if (closesession) {
         _exit(1);
@@ -2463,9 +2458,9 @@ char **argv;
   int n, m;
   childargs = argv + 1;
   sig_pipeignore();
+  pid_buf[fmt_ulong(pid_buf,getpid())]=0;
   if (chdir(auto_qmail) == -1) die_control();
 
-  pid_buf[fmt_ulong(pid_buf,getpid())]=0;
   if (!stralloc_copys(&title,"qmail-smtpd[")) die_nomem();
   if (!stralloc_cats(&title,pid_buf)) die_nomem();
   if (!stralloc_cats(&title,"]: ")) die_nomem();
