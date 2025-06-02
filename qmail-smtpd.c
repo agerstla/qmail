@@ -93,6 +93,25 @@ static stralloc foo = {0};
 
 static char pid_str[FMT_ULONG]="?PID?";
 
+char ssoutbuf[512];
+char sslogbuf[512];
+char sserrbuf[512];
+substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
+substdio sslog = SUBSTDIO_FDBUF(safewrite,2,sslogbuf,sizeof sslogbuf);
+substdio sserr = SUBSTDIO_FDBUF(safewrite,2,sserrbuf,sizeof sserrbuf);
+
+int addrinrcpthosts = 0;
+int envelopepos = 0; // 1: ehlo/helo, 2: mailfrom, 3: rcptto: 4: data
+void qsmtpdlog(const char *head, const char *result, const char *reason, const char *detail, const char *statuscode);
+void qlogenvelope(char *result, char *reason, char *detail, char *statuscode) { qsmtpdlog("qlogenvelope",result,reason,detail,statuscode); }
+void qlogreceived(char *result, char *reason, char *detail, char *statuscode) { qsmtpdlog("qlogreceived",result,reason,detail,statuscode); }
+
+char* logclean(const char* s);
+void logit(const char* message);
+void logit2(const char* message, const char* reason);
+void flush() { substdio_flush(&ssout); }
+void out(s) char *s; { substdio_puts(&ssout,s); }
+
 ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
 {
   int r;
@@ -110,29 +129,11 @@ ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
   return r;
 }
 
-char ssoutbuf[512];
-char sslogbuf[512];
-char sserrbuf[512];
-substdio ssout = SUBSTDIO_FDBUF(safewrite,1,ssoutbuf,sizeof ssoutbuf);
-substdio sslog = SUBSTDIO_FDBUF(safewrite,2,sslogbuf,sizeof sslogbuf);
-substdio sserr = SUBSTDIO_FDBUF(safewrite,2,sserrbuf,sizeof sserrbuf);
-
-int addrinrcpthosts = 0;
-int envelopepos = 0; // 1: ehlo/helo, 2: mailfrom, 3: rcptto: 4: data
-void qsmtpdlog(const char *head, const char *result, const char *reason, const char *detail, const char *statuscode);
-void qlogenvelope(char *result, char *reason, char *detail, char *statuscode) { qsmtpdlog("qlogenvelope",result,reason,detail,statuscode); }
-void qlogreceived(char *result, char *reason, char *detail, char *statuscode) { qsmtpdlog("qlogreceived",result,reason,detail,statuscode); }
-
-void logit(const char* message);
-void logit2(const char* message, const char* reason);
-void flush() { substdio_flush(&ssout); }
-void out(s) char *s; { substdio_puts(&ssout,s); }
-
 void die_read(char *reason) { logit2("read failed", reason); flush(); _exit(1); }
-void die_alarm() { qlogenvelope("rejected","alarmtimeout","","451"); out("451 timeout (#4.4.2)\r\n"); flush(); _exit(1); }
-void die_nomem() { qlogenvelope("rejected","out_of_memory","","421"); out("421 out of memory (#4.3.0)\r\n"); flush(); _exit(1); }
-void die_control() { qlogenvelope("rejected","cannot_read_controls","","421"); out("421 unable to read controls (#4.3.0)\r\n"); flush(); _exit(1); }
-void die_ipme() { qlogenvelope("rejected","unknown_ip_me","","553"); out("421 unable to figure out my IP addresses (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_alarm() { logit("connection timed out"); qlogenvelope("rejected","alarmtimeout","","451"); out("451 timeout (#4.4.2)\r\n"); flush(); _exit(1); }
+void die_nomem() { logit("out of memory"); qlogenvelope("rejected","out_of_memory","","421"); out("421 out of memory (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_control() { logit("unable to read controls"); qlogenvelope("rejected","cannot_read_controls","","421"); out("421 unable to read controls (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_ipme() { logit("unable to figure out IP address"); qlogenvelope("rejected","unknown_ip_me","","553"); out("421 unable to figure out my IP addresses (#4.3.0)\r\n"); flush(); _exit(1); }
 /* rbl: start */
 /*
 void die_dnsbl(arg)
@@ -148,26 +149,29 @@ char *arg;
 void err_maxrcpt()
 {
   out("452 max rcpt limit exceeded (#5.7.1)\r\n");
+  logit("exceeded max recipients");
   qlogenvelope("rejected","max_rcpt_exceeded","","452");
   flush();
 }
-void straynewline() { qlogenvelope("rejected","bad_newlines","","451"); out("451 See http://pobox.com/~djb/docs/smtplf.html.\r\n"); flush(); _exit(1); }
+void straynewline() { logit("stray newline"); qlogenvelope("rejected","bad_newlines","","451"); out("451 See http://pobox.com/~djb/docs/smtplf.html.\r\n"); flush(); _exit(1); }
 void die_pre_greet() { qlogenvelope("rejected","pregreet","","554"); out("554 SMTP protocol violation\r\n"); flush(); _exit(1); }
 
 void err_size() { qlogreceived("rejected","databytes_limit_exceeded","","552"); out("552 sorry, that message size exceeds my databytes limit (#5.3.4)\r\n"); }
 #ifndef TLS
-void err_nogateway() { qlogenvelope("rejected","not_in_rcpthosts","","553"); out("553 sorry, that domain isn't in my list of allowed rcpthosts (#5.7.1)\r\n"); }
+void err_nogateway() { logit2("recipient domain not in rcpthosts",logclean(addr.s)); qlogenvelope("rejected","not_in_rcpthosts","","553"); out("553 sorry, that domain isn't in my list of allowed rcpthosts (#5.7.1)\r\n"); }
 #else
 void err_nogateway()
 {
-  qlogenvelope("rejected","not_in_rcpthosts","","553"); out("553 sorry, that domain isn't in my list of allowed rcpthosts");
+  logit2("recipient domain not in rcpthosts",logclean(addr.s));
+  qlogenvelope("rejected","not_in_rcpthosts","","553");
+  out("553 sorry, that domain isn't in my list of allowed rcpthosts");
   tls_nogateway();
   out(" (#5.7.1)\r\n");
 }
 #endif
 void err_unimpl(arg) char *arg; { logit("unimplemented command"); out("502 unimplemented (#5.5.1)\r\n"); }
 void err_unrecog() { logit("unrecognized command"); out("500 unrecognised (#5.5.2)\r\n"); }
-void err_syntax(msg) char *msg; { 
+void err_syntax(msg) char *msg; {
    char tmp_buf[FMT_ULONG];
    tmp_buf[fmt_ulong(tmp_buf,addr.len)] = 0;
    logit2(msg,tmp_buf);
@@ -176,7 +180,7 @@ void err_wantmail() { logit("attempted RCPT or DATA before MAIL"); out("503 MAIL
 void err_wantrcpt() { logit("attempted DATA before RCPT"); out("503 RCPT first (#5.5.1)\r\n"); }
 void err_noop(arg) char *arg; { logit("NOOP"); out("250 ok\r\n"); }
 void err_vrfy(arg) char *arg; { logit("VRFY requested"); out("252 send some mail, i'll try my best\r\n"); }
-void err_qqt() { qlogenvelope("rejected","qqtfailure","","451"); out("451 qqt failure (#4.3.0)\r\n"); }
+void err_qqt() { logit("qqt failure"); qlogenvelope("rejected","qqtfailure","","451"); out("451 qqt failure (#4.3.0)\r\n"); }
 
 int err_child() { out("454 oops, problem with child and I can't auth (#4.3.0)\r\n"); return -1; }
 int err_fork() { out("454 oops, child won't start and I can't auth (#4.3.0)\r\n"); return -1; }
@@ -207,13 +211,13 @@ void err_bmt() { logit("recipient address in badmailto"); out("553 sorry, your e
 void err_bhelo() { logit("bad HELO"); out("553 sorry, your HELO host name has been denied (#5.7.1)\r\n"); }
 /* qregex: end */
 /* rejectnullsenders: start */
-void die_nullsender() { qlogenvelope("rejected","nullsenderdenied","","421"); out("421 null senders temporarily denied (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_nullsender() { logit("denied null sender"); qlogenvelope("rejected","nullsenderdenied","","421"); out("421 null senders temporarily denied (#4.3.0)\r\n"); flush(); _exit(1); }
 /* rejectnullsenders: end */
 /* rejectrelaytest: start */
-void err_relay() { qlogenvelope("rejected","dontrelay","","553"); out("553 we don't relay (#5.7.1)\r\n"); }
+void err_relay() { logit("rejected relay"); qlogenvelope("rejected","dontrelay","","553"); out("553 we don't relay (#5.7.1)\r\n"); }
 /* rejectrelaytest: end */
 /* authtlsvariables: start */
-void err_authmismatch() { qlogenvelope("rejected","authnotmailfrom","","503"); out("503 from and auth not the same (#5.5.1)\r\n"); }
+void err_authmismatch() { logit("auth mismatch"); qlogenvelope("rejected","authnotmailfrom","","503"); out("503 from and auth not the same (#5.5.1)\r\n"); }
 /* authtlsvariables: end */
 
 stralloc greeting = {0};
@@ -304,6 +308,7 @@ void err_rblreject() {
     if (rblserver.len) qlogenvelope("rejected","rblreject",rblserver.s,"553");
     else qlogenvelope("rejected","rblreject","","553");
   }
+  logit("RBL rejected");
   substdio_put(&ssout,rblmessage.s,rblmessage.len);
   flush();
 }
@@ -316,6 +321,7 @@ void die_rbldelay() {
     if (rblserver.len) qlogenvelope("rejected","rbldelay",rblserver.s,"451");
     else qlogenvelope("rejected","rbldelay","","451");
   }
+  logit("RBL timeout");
   substdio_put(&ssout,rblmessage.s,rblmessage.len); flush();
   _exit(1);
 }
@@ -1076,9 +1082,13 @@ int checkrcptcount() {
 
 /* logging patch */
 
-char* logclean(s) char *s;
+char* logclean(s) const char *s;
 {
    int i;
+   if (!s) {
+      if (!stralloc_copyb(&foo, "(null)", 6)) die_nomem();
+      return &foo;
+   }
    while (!stralloc_copys(&foo,s)) die_nomem();
    for (i = 0;i < foo.len;++i)
      if (foo.s[i] == '\n')
@@ -1106,7 +1116,7 @@ void safelog(const char* string) {
 }
 
 void pidlog()
-{   
+{
    if (*pid_str == '?') /* not yet set from getpid() */
      pid_str[fmt_ulong(pid_str,getpid())] = 0;
    if (!stralloc_cats(&log_buf, pid_str)) die_nomem();
@@ -1120,7 +1130,7 @@ void logit2(const char* message, const char* reason)
 {
   if (!stralloc_copys(&log_buf, "qmail-smtpd: ")) die_nomem();
   if (!stralloc_cats(&log_buf, "pid ")) die_nomem();
-  pidlog(); 
+  pidlog();
   if (!stralloc_catb(&log_buf, ": ", 2)) die_nomem();
   safelog(message);
   if (reason) {
@@ -1283,7 +1293,11 @@ void smtp_mail(arg) char *arg;
 /* qregex: end */
   flagsize = 0;
   mailfrom_parms(arg);
-  if (flagsize) { err_size(); return; }
+  if (flagsize) {
+     logit("exceeded datasize limit");
+     err_size();
+     return;
+  }
   if (!(spp_val = spp_mail())) return;
   if (spp_val == 1)
 
@@ -1316,6 +1330,7 @@ void smtp_mail(arg) char *arg;
     case SPF_ERROR:
       if (spfbehavior < 2) break;
       qlogenvelope("rejected","spf","lookupfailure","451");
+      logit("SPF lookup failure");
       out("451 SPF lookup failure (#4.3.0)\r\n");
       return;
     case SPF_NONE:
@@ -1359,6 +1374,7 @@ void err_spf() {
       out(" (#5.7.1)\r\n");
     }
   }
+  logit2("SPF error",logclean(spfbarfmsg.s));
 }
 
 int flagdnsbl = 0;
@@ -1540,6 +1556,7 @@ void smtp_rcpt(arg) char *arg; {
     }
 
     if ( (rcres == 0) || (rcres == 3) ) {
+      logit2("rcpt check error");
       out(rcptcheck_err); flush();
       if (closesession) {
         _exit(1);
@@ -1594,6 +1611,7 @@ void smtp_rcpt(arg) char *arg; {
   }
 
   else if (ret == 0) {
+    logit("denied by eMPF policy");
     qlogenvelope("rejected","empf","","550");
     out("550 cannot message ");
     out(addr.s);
@@ -1601,6 +1619,7 @@ void smtp_rcpt(arg) char *arg; {
   }
 
   else {
+    logit("broken eMPF policy");
     qlogenvelope("rejected","empf","","454");
     out("454 cannot message ");
     out(addr.s);
@@ -1865,6 +1884,7 @@ void smtp_data(arg) char *arg; {
   if (!*qqx) { acceptmessage(qp); qlogreceived("accepted","queueaccept","","250"); return; }
   if (hops) {
     out("554 too many hops, this message is looping (#5.4.6)\r\n");
+    logit("exceeded hop count");
     qlogreceived("rejected","message_loop","","554");
     return;
   }
