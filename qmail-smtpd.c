@@ -87,6 +87,12 @@ static const char *protocol = "SMTP";
 char *remoteip4;
 /* end spf ipv6 fix */
 
+stralloc addr = {0}; /* will be 0-terminated, if addrparse returns 1 */
+
+static stralloc foo = {0};
+
+static char pid_str[FMT_ULONG]="?PID?";
+
 ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
 {
   int r;
@@ -96,7 +102,11 @@ ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
   else
 #endif
   r = timeoutwrite(timeout,fd,buf,len);
-  if (r <= 0) _exit(1);
+  if (r <= 0)
+  {
+     logit("write error (disconnect?): quitting");
+     _exit(1);
+  }
   return r;
 }
 
@@ -155,13 +165,17 @@ void err_nogateway()
   out(" (#5.7.1)\r\n");
 }
 #endif
-void err_unimpl(arg) char *arg; { out("502 unimplemented (#5.5.1)\r\n"); }
-void err_unrecog() { out("500 unrecognised (#5.5.2)\r\n"); }
-void err_syntax() { out("555 syntax error (#5.5.4)\r\n"); }
-void err_wantmail() { out("503 MAIL first (#5.5.1)\r\n"); }
-void err_wantrcpt() { out("503 RCPT first (#5.5.1)\r\n"); }
-void err_noop(arg) char *arg; { out("250 ok\r\n"); }
-void err_vrfy(arg) char *arg; { out("252 send some mail, i'll try my best\r\n"); }
+void err_unimpl(arg) char *arg; { logit("unimplemented command"); out("502 unimplemented (#5.5.1)\r\n"); }
+void err_unrecog() { logit("unrecognized command"); out("500 unrecognised (#5.5.2)\r\n"); }
+void err_syntax(msg) char *msg; { 
+   char tmp_buf[FMT_ULONG];
+   tmp_buf[fmt_ulong(tmp_buf,addr.len)] = 0;
+   logit2(msg,tmp_buf);
+   out("555 syntax error (#5.5.4)\r\n"); }
+void err_wantmail() { logit("attempted RCPT or DATA before MAIL"); out("503 MAIL first (#5.5.1)\r\n"); }
+void err_wantrcpt() { logit("attempted DATA before RCPT"); out("503 RCPT first (#5.5.1)\r\n"); }
+void err_noop(arg) char *arg; { logit("NOOP"); out("250 ok\r\n"); }
+void err_vrfy(arg) char *arg; { logit("VRFY requested"); out("252 send some mail, i'll try my best\r\n"); }
 void err_qqt() { qlogenvelope("rejected","qqtfailure","","451"); out("451 qqt failure (#4.3.0)\r\n"); }
 
 int err_child() { out("454 oops, problem with child and I can't auth (#4.3.0)\r\n"); return -1; }
@@ -188,9 +202,9 @@ void die_rcpt2() { qlogenvelope("rejected","rcptcheck","cannotexecute","421"); o
 /*
 void err_bmf() { out("553 sorry, your envelope sender is in my badmailfrom list (#5.7.1)\r\n"); }
 */
-void err_bmf() { out("553 sorry, your envelope sender has been denied (#5.7.1)\r\n"); }
-void err_bmt() { out("553 sorry, your envelope recipient has been denied (#5.7.1)\r\n"); }
-void err_bhelo() { out("553 sorry, your HELO host name has been denied (#5.7.1)\r\n"); }
+void err_bmf() { logit("sender address in badmailfrom"); out("553 sorry, your envelope sender has been denied (#5.7.1)\r\n"); }
+void err_bmt() { logit("recipient address in badmailto"); out("553 sorry, your envelope recipient has been denied (#5.7.1)\r\n"); }
+void err_bhelo() { logit("bad HELO"); out("553 sorry, your HELO host name has been denied (#5.7.1)\r\n"); }
 /* qregex: end */
 /* rejectnullsenders: start */
 void die_nullsender() { qlogenvelope("rejected","nullsenderdenied","","421"); out("421 null senders temporarily denied (#4.3.0)\r\n"); flush(); _exit(1); }
@@ -218,6 +232,7 @@ void smtp_help(arg) char *arg;
 }
 void smtp_quit(arg) char *arg;
 {
+  logit("rewmote end QUIT: quitting"); 
   smtp_greet("221 "); out("\r\n"); flush(); _exit(0);
 }
 
@@ -544,9 +559,8 @@ void setup()
   else
   #endif
   dohelo(remotehost);
+  logit("new session");
 }
-
-stralloc addr = {0}; /* will be 0-terminated, if addrparse returns 1 */
 
 int addrparse(arg)
 char *arg;
@@ -1062,6 +1076,19 @@ int checkrcptcount() {
 
 /* logging patch */
 
+char* logclean(s) char *s;
+{
+   int i;
+   while (!stralloc_copys(&foo,s)) die_nomem();
+   for (i = 0;i < foo.len;++i)
+     if (foo.s[i] == '\n')
+       foo.s[i] = '/';
+   else
+     if (!issafe(foo.s[i]))
+       foo.s[i] = '_';
+   return &foo;
+}
+
 void safeloglen(const char* string, const int len) {
     if (string && len) {
         if (!stralloc_catb(&log_buf, string, len-1)) die_nomem();
@@ -1078,6 +1105,13 @@ void safelog(const char* string) {
     }
 }
 
+void pidlog()
+{   
+   if (*pid_str == '?') /* not yet set from getpid() */
+     pid_str[fmt_ulong(pid_str,getpid())] = 0;
+   if (!stralloc_cats(&log_buf, pid_str)) die_nomem();
+}
+
 void logit(const char* message) {
     logit2(message, (const char*)0);
 }
@@ -1085,6 +1119,9 @@ void logit(const char* message) {
 void logit2(const char* message, const char* reason)
 {
   if (!stralloc_copys(&log_buf, "qmail-smtpd: ")) die_nomem();
+  if (!stralloc_cats(&log_buf, "pid ")) die_nomem();
+  pidlog(); 
+  if (!stralloc_catb(&log_buf, ": ", 2)) die_nomem();
   safelog(message);
   if (reason) {
       if (!stralloc_cats(&log_buf, " (")) die_nomem();
@@ -1166,6 +1203,7 @@ void mailfrom_parms(arg) char *arg;
 void smtp_helo(arg) char *arg;
 {
   envelopepos = 1;
+  logit2("received HELO",logclean(arg));
   if(!spp_helo(arg)) return;
   smtp_greet("250 "); out("\r\n");
   seenmail = 0; dohelo(arg);
@@ -1179,6 +1217,7 @@ void smtp_ehlo(arg) char *arg;
 #ifdef TLS
   struct stat st;
 #endif
+  logit2("received EHLO",logclean(arg));
   size[fmt_ulong(size,(unsigned int) databytes)] = 0;
   envelopepos = 1;
   if(!spp_helo(arg)) return;
@@ -1211,6 +1250,7 @@ void smtp_rset(arg) char *arg;
   rcptcount = 0;
   envelopepos = 1;
   /* end rcptcount adjustment */
+  logit("session RSET");
   out("250 flushed\r\n");
 }
 
@@ -1221,7 +1261,7 @@ void smtp_mail(arg) char *arg;
   envelopepos = 2;
   if (smtpauth)
     if (smtpauth > 10 && !seenauth) { err_submission(); return; }
-  if (!addrparse(arg)) { err_syntax(); return; }
+  if (!addrparse(arg)) { err_syntax("MAIL with too long address"); return; }
 /* authtlsvariables: start */
     /* if it is authenticated but MAIL FROM and AUTH USER are different */
     if (smtpauth && seenauth && forceauthmailfrom) {
@@ -1298,6 +1338,7 @@ void smtp_mail(arg) char *arg;
   if (!stralloc_copys(&rcptto,"")) die_nomem();
   if (!stralloc_copys(&mailfrom,addr.s)) die_nomem();
   if (!stralloc_0(&mailfrom)) die_nomem();
+  logit2("sender",logclean(mailfrom.s));
   out("250 ok\r\n");
 }
 
@@ -1330,7 +1371,7 @@ void smtp_rcpt(arg) char *arg; {
 /* end of empf pacth  */
   envelopepos = 3;
   if (!seenmail) { err_wantmail(); return; }
-  if (!addrparse(arg)) { err_syntax(); return; }
+  if (!addrparse(arg)) { err_syntax("RCPT with too long address"); return; }
 /* rejectrelaytest: start */
   if (addrrelay()) { err_relay(); return; }
 /* rejectrelaytest: end */
@@ -1548,6 +1589,7 @@ void smtp_rcpt(arg) char *arg; {
       if (relayclient) { qlogenvelope("accepted","relayclient","","250"); }
       else { qlogenvelope("accepted","rcpthosts","","250"); }
     }
+    logit2("recipient",logclean(addr.s));
     out("250 ok\r\n");
   }
 
@@ -1600,6 +1642,7 @@ void flush_io() { ssin.p = 0; flush(); }
 
 struct qmail qqt;
 unsigned int bytestooverflow = 0;
+unsigned int messagebytes = 0;
 
 void put(ch)
 char *ch;
@@ -1607,6 +1650,7 @@ char *ch;
   if (bytestooverflow)
     if (!--bytestooverflow)
       qmail_fail(&qqt);
+  messagebytes++;
   qmail_put(&qqt,ch,1);
 }
 
@@ -1776,6 +1820,9 @@ void acceptmessage(qp) unsigned long qp;
   accept_buf[fmt_ulong(accept_buf,qp)] = 0;
   out(accept_buf);
   out("\r\n");
+  logit2("message accepted",accept_buf);
+  /* accept_buf[fmt_ulong(accept_buf,messagebytes)] = 0;
+  logit2("message size",accept_buf); */
 }
 
 void smtp_data(arg) char *arg; {
@@ -1789,6 +1836,7 @@ void smtp_data(arg) char *arg; {
   if (!spp_data()) return;
   seenmail = 0;
   if (databytes) bytestooverflow = databytes + 1;
+  messagebytes = 0;
   if (qmail_open(&qqt) == -1) { err_qqt(); return; }
   qp = qmail_qp(&qqt);
   strnumqp[fmt_ulong(strnumqp,qp)] = 0; /* qp for qlog */
@@ -1834,6 +1882,7 @@ void smtp_data(arg) char *arg; {
   }
   out(qqx + 1);
   out("\r\n");
+  logit2("message rejected",logclean(qqx));
 }
 
 
