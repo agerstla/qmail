@@ -89,6 +89,8 @@ char *remoteip4;
 
 stralloc addr = {0}; /* will be 0-terminated, if addrparse returns 1 */
 
+static char pid_buf[FMT_ULONG]="?PID?";
+
 static stralloc foo = {0};
 
 char ssoutbuf[512];
@@ -363,8 +365,6 @@ int vrtcount = 0;
 int vrtlog_do = 0;
 
 stralloc title = {0};
-
-static char pid_buf[FMT_ULONG]="?PID?";
 /* validrcptto.cdb: end */
 
 /* realbadrcpt: start */
@@ -1468,7 +1468,7 @@ void smtp_rcpt(arg) char *arg; {
       vrtres = vrtcheck();
       if (vrtres > 0) {
         flagvrt = 1;
-	    flagrcptmatch = 1;
+        flagrcptmatch = 1;
         strerr_warn5(title.s,"validrcptto: accepted address <",addr.s,"> at ",remoteip,0);
       }
       else if (vrtres < 0) {
