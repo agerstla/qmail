@@ -223,7 +223,7 @@ void err_bhelo() { logit("bad HELO"); out("553 sorry, your HELO host name has be
 void die_nullsender() { logit("denied null sender"); qlogenvelope("rejected","nullsenderdenied","","421"); out("421 null senders temporarily denied (#4.3.0)\r\n"); flush(); _exit(1); }
 /* rejectnullsenders: end */
 /* rejectrelaytest: start */
-void err_relay() { logit("rejected relay"); qlogenvelope("rejected","dontrelay","","553"); out("553 we don't relay (#5.7.1)\r\n"); }
+void err_relay() { logit("attempted invalid relay"); qlogenvelope("rejected","dontrelay","","553"); out("553 we don't relay (#5.7.1)\r\n"); }
 /* rejectrelaytest: end */
 /* authtlsvariables: start */
 void err_authmismatch() { logit("auth mismatch"); qlogenvelope("rejected","authnotmailfrom","","503"); out("503 from and auth not the same (#5.5.1)\r\n"); }
