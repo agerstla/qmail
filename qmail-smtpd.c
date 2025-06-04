@@ -188,28 +188,28 @@ void err_qqt() { logit("qqt failure"); qlogenvelope("rejected","qqtfailure","","
 void die_qvsetup() { logit2("verify setup failure",error_str(errno)); out("451 qv setup failure (#4.3.0)\r\n"); flush(); _exit(1); }
 void die_qvtimeout() { logit("verify timeout (no response from verification server)"); out("451 qv temporary failure (#4.3.0)\r\n"); flush(); _exit(1); }
 void die_qvmiscfail() { logit2("verify temporary failure",error_str(errno)); out("451 qv temporary failure (#4.3.0)\r\n"); flush(); _exit(1); }
-void err_nosuchuser550() { logit("Unverified mailbox at RCPT time\n"); qlogenvelope("rejected","verify","rcpt","550"); out("550 sorry, no mailbox here by that name. (#5.1.1)\r\n"); }
-void err_nosuchuser554() { logit("Unverified mailbox(es) at DATA time\n"); qlogenvelope("rejected","verify","data","554"); out("554 sorry, invalid mailbox name(s). (#5.1.1)\r\n"); }
+void err_nosuchuser550() { logit("unverified mailbox at RCPT time\n"); qlogenvelope("rejected","verify","rcpt","550"); out("550 sorry, no mailbox here by that name. (#5.1.1)\r\n"); }
+void err_nosuchuser554() { logit("unverified mailbox(es) at DATA time\n"); qlogenvelope("rejected","verify","data","554"); out("554 sorry, invalid mailbox name(s). (#5.1.1)\r\n"); }
 
-int err_child() { out("454 oops, problem with child and I can't auth (#4.3.0)\r\n"); return -1; }
-int err_fork() { out("454 oops, child won't start and I can't auth (#4.3.0)\r\n"); return -1; }
-int err_pipe() { out("454 oops, unable to open pipe and I can't auth (#4.3.0)\r\n"); return -1; }
-int err_write() { out("454 oops, unable to write pipe and I can't auth (#4.3.0)\r\n"); return -1; }
-void err_authd() { out("503 you're already authenticated (#5.5.0)\r\n"); }
-void err_authmail() { out("503 no auth during mail transaction (#5.5.0)\r\n"); }
-int err_noauth() { out("504 auth type unimplemented (#5.5.1)\r\n"); return -1; }
-int err_authabrt() { out("501 auth exchange canceled (#5.0.0)\r\n"); return -1; }
-int err_input() { out("501 malformed auth input (#5.5.4)\r\n"); return -1; }
-void err_authfail() { qlogenvelope("rejected","authfailed","","535"); out("535 authentication failed (#5.7.1)\r\n"); }
-void err_authinvalid() { qlogenvelope("rejected","authinvalid","","504"); out("504 auth type invalid (#5.5.1)\r\n"); }
-void err_submission() { qlogenvelope("rejected","authrequired","","530"); out("530 Authorization required (#5.7.1) \r\n"); }
-void err_vrt() { qlogenvelope("rejected","validrcptto","","553"); out("553 sorry, this recipient is not in my validrcptto list (#5.7.1)\r\n"); }
-void die_brtlimit() { qlogenvelope("rejected","brtlimit","","421"); out("421 too many invalid addresses, goodbye (#4.3.0)\r\n"); flush(); _exit(1); }
-void err_rcpt() { qlogenvelope("rejected","nomailbox","","550"); out("550 sorry, no mailbox here by that name (#5.1.1)\r\n"); }
+int err_child() { logit("problem with auth child"); out("454 oops, problem with child and I can't auth (#4.3.0)\r\n"); return -1; }
+int err_fork() { logit("unable to fork auth child"); out("454 oops, child won't start and I can't auth (#4.3.0)\r\n"); return -1; }
+int err_pipe() { logit("unable to open auth pipe"); out("454 oops, unable to open pipe and I can't auth (#4.3.0)\r\n"); return -1; }
+int err_write() { logit("unable to write auth pipe"); out("454 oops, unable to write pipe and I can't auth (#4.3.0)\r\n"); return -1; }
+void err_authd() { logit("already authenticated"); out("503 you're already authenticated (#5.5.0)\r\n"); }
+void err_authmail() { logit("no AUTH during mail transactions"); out("503 no auth during mail transaction (#5.5.0)\r\n"); }
+int err_noauth() { logit("unimplemented AUTH type"); out("504 auth type unimplemented (#5.5.1)\r\n"); return -1; }
+int err_authabrt() { logit("AUTH exchange cancelled"); out("501 auth exchange canceled (#5.0.0)\r\n"); return -1; }
+int err_input() { logit("malformed AUTH input"); out("501 malformed auth input (#5.5.4)\r\n"); return -1; }
+void err_authfail() { logit("authentication failed"); qlogenvelope("rejected","authfailed","","535"); out("535 authentication failed (#5.7.1)\r\n"); }
+void err_authinvalid() { logit("invalid authentication"); qlogenvelope("rejected","authinvalid","","504"); out("504 auth type invalid (#5.5.1)\r\n"); }
+void err_submission() { logit("authentication required"); qlogenvelope("rejected","authrequired","","530"); out("530 Authorization required (#5.7.1) \r\n"); }
+void err_vrt() { logit("not a validrcptto"); qlogenvelope("rejected","validrcptto","","553"); out("553 sorry, this recipient is not in my validrcptto list (#5.7.1)\r\n"); }
+void die_brtlimit() { logit("brtlimit exceeded"); qlogenvelope("rejected","brtlimit","","421"); out("421 too many invalid addresses, goodbye (#4.3.0)\r\n"); flush(); _exit(1); }
+void err_rcpt() { logit("no such mailbox"); qlogenvelope("rejected","nomailbox","","550"); out("550 sorry, no mailbox here by that name (#5.1.1)\r\n"); }
 /* rcptcheck: start */
-void die_fork() { qlogenvelope("rejected","rcptcheck","cannotfork","421"); out("421 unable to fork (#4.3.0)\r\n"); flush(); _exit(1); }
-void die_rcpt() { qlogenvelope("rejected","rcptcheck","cannotverify","421"); out("421 unable to verify recipient (#4.3.0)\r\n"); flush(); _exit(1); }
-void die_rcpt2() { qlogenvelope("rejected","rcptcheck","cannotexecute","421"); out("421 unable to execute recipient check (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_fork() { logit("unable to fork rcptcheck"); qlogenvelope("rejected","rcptcheck","cannotfork","421"); out("421 unable to fork (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_rcpt() { logit("unable to communication with rcptcheck"); qlogenvelope("rejected","rcptcheck","cannotverify","421"); out("421 unable to verify recipient (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_rcpt2() { logit("unable to execute rcptcheck"); qlogenvelope("rejected","rcptcheck","cannotexecute","421"); out("421 unable to execute recipient check (#4.3.0)\r\n"); flush(); _exit(1); }
 /* rcptcheck: end */
 /* qregex: start */
 /*
