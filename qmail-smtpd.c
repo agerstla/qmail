@@ -481,7 +481,7 @@ void setup()
   if (x) { scan_ulong(x,&u); databytes = u; }
   if (!(databytes + 1)) --databytes;
 
-  x = env_get("SMTPD_GREETDELAY");
+  x = env_get("GREETDELAY");
   if (x) { scan_ulong(x, &u); greetdelay = u; }
   x = env_get("DROP_PRE_GREET");
   if (x) { scan_ulong(x, &u); drop_pre_greet = u; }
