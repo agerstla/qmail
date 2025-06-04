@@ -185,6 +185,12 @@ void err_noop(arg) char *arg; { logit("NOOP"); out("250 ok\r\n"); }
 void err_vrfy(arg) char *arg; { logit("VRFY requested"); out("252 send some mail, i'll try my best\r\n"); }
 void err_qqt() { logit("qqt failure"); qlogenvelope("rejected","qqtfailure","","451"); out("451 qqt failure (#4.3.0)\r\n"); }
 
+void die_qvsetup() { logit2("verify setup failure",error_str(errno)); out("451 qv setup failure (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_qvtimeout() { logit("verify timeout (no response from verification server)"); out("451 qv temporary failure (#4.3.0)\r\n"); flush(); _exit(1); }
+void die_qvmiscfail() { logit2("verify temporary failure",error_str(errno)); out("451 qv temporary failure (#4.3.0)\r\n"); flush(); _exit(1); }
+void err_nosuchuser550() { logit("Unverified mailbox at RCPT time\n"); qlogenvelope("rejected","verify","rcpt","550"); out("550 sorry, no mailbox here by that name. (#5.1.1)\r\n"); }
+void err_nosuchuser554() { logit("Unverified mailbox(es) at DATA time\n"); qlogenvelope("rejected","verify","data","554"); out("554 sorry, invalid mailbox name(s). (#5.1.1)\r\n"); }
+
 int err_child() { out("454 oops, problem with child and I can't auth (#4.3.0)\r\n"); return -1; }
 int err_fork() { out("454 oops, child won't start and I can't auth (#4.3.0)\r\n"); return -1; }
 int err_pipe() { out("454 oops, unable to open pipe and I can't auth (#4.3.0)\r\n"); return -1; }
@@ -252,6 +258,8 @@ char *localport;
 char *submission;
 char *relayclient;
 char *dnsblskip;
+char *verify;
+int verifydefer=0;
 char *auth;
 /* authtlsvariables: start */
 int flagtls = 0;
@@ -544,6 +552,20 @@ void setup()
   x = env_get("DNSBLFAILCLOSED");
   if (x) { scan_ulong(x,&u); flagrblfailclosed = u; }
 /* rbl: end */
+/* verify: start */
+  verify =  env_get("VERIFY");
+  if (verify)
+  {
+    if (*verify == '\0') /* Disable verification if VERIFY="" */
+    {
+      verify = 0; 
+      /* Warning message since previous version of qmail-verify used VERIFY="" to enable verification */
+      enew(); eout("Note recipient verification explicitly disabled.\n"); eflush();
+    }
+    else
+      if ((*verify == 'D') || (*verify == 'd')) verifydefer=1;
+  }  
+/* verift: end */
   auth = env_get("SMTPAUTH");
   if (auth) {
     smtpauth = 1;
@@ -1248,6 +1270,7 @@ void smtp_ehlo(arg) char *arg;
 void smtp_rset(arg) char *arg;
 {
   spp_rset();
+  flagdenyany = 0;
   seenmail = 0; /* seenauth = 0; RFC 5321: retain authentication */
   mailfrom.len = 0; rcptto.len = 0;
   /* prevents the maxrcpto error if control/maxrcpt limit has been exceeded in the same email, but not in multiple messages sequentially */
@@ -1375,7 +1398,7 @@ int flagdnsbl = 0;
 stralloc dnsblhost = {0};
 
 void smtp_rcpt(arg) char *arg; {
-  int flagrcptmatch = 0; /* 0 undefined, 1 validrcptto, 4 rcptcheck */
+  int flagrcptmatch = 0; /* 0 undefined, 1 validrcptto, 2 verify, 4 rcptcheck */
 /* added by empf patch */
   int ret = 0;
 /* end of empf pacth  */
@@ -1487,6 +1510,18 @@ void smtp_rcpt(arg) char *arg; {
 
   spp_rcpt_accepted();
 
+/* verify: start */
+  if(!relayclient && !flagvrt)
+  {
+    if (verify && verifyrcpt(find_digit_colon_eos(verify),&addr,verifydefer,die_qvtimeout,die_qvmiscfail))
+    {
+      err_nosuchuser550();
+      return;
+    }
+    if(verify && !verifydefer) flagrcptmatch = 2;
+  }
+/* verify: end */
+   
   /* rcptcheck */
   if ( (rcptcheck[0]) && (!relayclient || rcptcheckrelayclient) ) { // if RCPTCHECK is not defined, addrvalid returns 1 (rcpt ok),check before calling
     strerr_warn5(title.s,"rcptcheck: checking <",addr.s,"> at ",remoteip,0);
@@ -1596,6 +1631,7 @@ void smtp_rcpt(arg) char *arg; {
     rcptcount++;
     if (checkrcptcount() == 1) { err_maxrcpt(); return; }
     if (flagrcptmatch == 1) { qlogenvelope("accepted","rcptto","validrcptto","250"); }
+    if (flagrcptmatch == 2) { qlogenvelope("accepted","rcptto","verify","250"); }
     else if (flagrcptmatch == 4) { qlogenvelope("accepted","rcptto","rcptcheck","250"); }
     else {
       if (relayclient) { qlogenvelope("accepted","relayclient","","250"); }
@@ -1846,6 +1882,7 @@ void smtp_data(arg) char *arg; {
 
   if (!seenmail) { err_wantmail(); return; }
   if (!rcptto.len) { err_wantrcpt(); return; }
+  if (verifydefer && flagdenyany) { err_nosuchuser554(); return; }
   envelopepos = 4;
   if (!spp_data()) return;
   seenmail = 0;

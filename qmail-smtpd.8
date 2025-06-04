@@ -328,6 +328,67 @@ Number of seconds
 will wait for each new buffer of data from the remote SMTP client.
 Default: 1200.
 
+.SH "RECIPIENT VERIFICATION"
+Recipient verification is enabled with the
+.B VERIFY
+environment variable. This can be used to specify per-recipient
+rejection of invalid recipient addresses (immediate verification
+causing a permanent 550 error response to the RCPT command),
+or deferred rejection at DATA time (554 response) of the whole
+session if any recipient addresses don't exist.
+
+To verify an address,
+.B qmail-smtpd
+uses a separate
+.B qmail-verify
+UDP server. By default this will be on the loopback address 127.0.0.1,
+port 11113. Enable verification like this,
+
+.EX
+   VERIFY=":"
+
+   VERIFY="DEFER"
+.EE
+
+(for immediate, deferred verification respectively). A different IP
++address and/or port can be specified for
+.B qmail-verify
+as in these examples,
+
+.EX
+   VERIFY="192.168.1.1"
+   VERIFY=":10101"
+   VERIFY="DEFER,:10101"
+   VERIFY="DEFER,192.168.1.1:10101"
+.EE
+
+Recipient verification may be explicitly disabled by setting
+.B VERIFY
+to an empty string,
+
+.EX
+   VERIFY=""
+.EE
+
+Addresses with domains appearing in
+.B control/rcpthosts
+but not in
+.B control/locals
+or
+.B control/virtualdomains
+will be considered valid, reflecting qmail's standard behaviour.
+.P
+Note that if the environment variable
+.B RELAYCLIENT
+is set, no checking is carried out.
+.P
+.B qmail-verify
+needs to be running to respond to recipient
+verification queries. If no
+.B qmail-verify
+response is received a temporary 451 error response is
+given to the remote system and the session terminated.
+
 .SH "ENVIRONMENT VARIABLES READ"
 Environment variables may be defined globally in the
 .B qmail-smtpd
@@ -447,4 +508,5 @@ qmail-control(5),
 qmail-inject(8),
 qmail-newmrh(8),
 qmail-queue(8),
-qmail-remote(8)
+qmail-remote(8),
+qmail-verify(8)

@@ -25,4 +25,7 @@ extern unsigned int scan_memcmp();
 
 extern unsigned int scan_long();
 
+extern char *find_digit_colon_eos();
+extern int scan_ip_port();
+
 #endif

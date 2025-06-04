@@ -70,6 +70,7 @@ qmail-qmqpc
 qmail-qmqpd
 qmail-qmtpd
 qmail-smtpd
+qmail-verify
 sendmail
 tcp-env
 qmail-newmrh
@@ -145,6 +146,7 @@ qmail-qmqpc.0
 qmail-qmqpd.0
 qmail-qmtpd.0
 qmail-smtpd.0
+qmail-verify.0
 tcp-env.0
 qmail-newmrh.8
 qmail-newmrh.0
