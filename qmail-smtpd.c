@@ -558,13 +558,13 @@ void setup()
   {
     if (*verify == '\0') /* Disable verification if VERIFY="" */
     {
-      verify = 0; 
+      verify = 0;
       /* Warning message since previous version of qmail-verify used VERIFY="" to enable verification */
       enew(); eout("Note recipient verification explicitly disabled.\n"); eflush();
     }
     else
       if ((*verify == 'D') || (*verify == 'd')) verifydefer=1;
-  }  
+  }
 /* verift: end */
   auth = env_get("SMTPAUTH");
   if (auth) {
@@ -1146,7 +1146,7 @@ void logit(const char* message) {
 void logit2(const char* message, const char* reason)
 {
   if (!stralloc_copys(&log_buf, "qmail-smtpd[")) die_nomem();
-  if (!stralloc_cats(&log_buf,pid_buf)) die_nomem();   
+  if (!stralloc_cats(&log_buf,pid_buf)) die_nomem();
   if (!stralloc_catb(&log_buf, "]: ", 3)) die_nomem();
   safelog(message);
   if (reason) {
@@ -1521,7 +1521,7 @@ void smtp_rcpt(arg) char *arg; {
     if(verify && !verifydefer) flagrcptmatch = 2;
   }
 /* verify: end */
-   
+
   /* rcptcheck */
   if ( (rcptcheck[0]) && (!relayclient || rcptcheckrelayclient) ) { // if RCPTCHECK is not defined, addrvalid returns 1 (rcpt ok),check before calling
     strerr_warn5(title.s,"rcptcheck: checking <",addr.s,"> at ",remoteip,0);
