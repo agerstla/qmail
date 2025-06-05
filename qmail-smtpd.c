@@ -190,8 +190,8 @@ void err_qqt() { logit("qqt failure"); qlogenvelope("rejected","qqtfailure","","
 void die_qvsetup() { logit2("verify setup failure",error_str(errno)); out("451 qv setup failure (#4.3.0)\r\n"); flush(); _exit(1); }
 void die_qvtimeout() { logit("verify timeout (no response from verification server)"); out("451 qv temporary failure (#4.3.0)\r\n"); flush(); _exit(1); }
 void die_qvmiscfail() { logit2("verify temporary failure",error_str(errno)); out("451 qv temporary failure (#4.3.0)\r\n"); flush(); _exit(1); }
-void err_nosuchuser550() { logit("unverified mailbox at RCPT time\n"); qlogenvelope("rejected","verify","rcpt","550"); out("550 sorry, no mailbox here by that name. (#5.1.1)\r\n"); }
-void err_nosuchuser554() { logit("unverified mailbox(es) at DATA time\n"); qlogenvelope("rejected","verify","data","554"); out("554 sorry, invalid mailbox name(s). (#5.1.1)\r\n"); }
+void err_nosuchuser550() { logit("unverified mailbox at RCPT time"); qlogenvelope("rejected","verify","rcpt","550"); out("550 sorry, no mailbox here by that name. (#5.1.1)\r\n"); }
+void err_nosuchuser554() { logit("unverified mailbox(es) at DATA time"); qlogenvelope("rejected","verify","data","554"); out("554 sorry, invalid mailbox name(s). (#5.1.1)\r\n"); }
 
 int err_child() { logit("problem with auth child"); out("454 oops, problem with child and I can't auth (#4.3.0)\r\n"); return -1; }
 int err_fork() { logit("unable to fork auth child"); out("454 oops, child won't start and I can't auth (#4.3.0)\r\n"); return -1; }
