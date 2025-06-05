@@ -2,6 +2,7 @@
 #include "stralloc.h"
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include "error.h"
 
 int query_skt(fd,queryp,responsep,maxresponsesize,timeout,timeoutfn,errfn)

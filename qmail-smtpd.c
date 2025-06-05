@@ -33,6 +33,7 @@
 #include "fd.h"
 #include "open.h"
 #include "policy.h"
+#include "verifyrcpt.h"
 #include <string.h>
 
 extern void spp_rcpt_accepted();
@@ -93,6 +94,27 @@ static char pid_buf[FMT_ULONG]="?PID?";
 
 static stralloc foo = {0};
 
+char* logclean(const char* s);
+void logit(const char* message);
+void logit2(const char* message, const char* reason);
+
+ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
+{
+  int r;
+#ifdef TLS
+  if (ssl && fd == ssl_wfd)
+    r = ssl_timeoutwrite(timeout, ssl_rfd, ssl_wfd, ssl, buf, len);
+  else
+#endif
+  r = timeoutwrite(timeout,fd,buf,len);
+  if (r <= 0)
+  {
+     if(fd != 2) logit("write error (disconnect?): quitting");
+     _exit(1);
+  }
+  return r;
+}
+
 char ssoutbuf[512];
 char sslogbuf[512];
 char sserrbuf[512];
@@ -106,31 +128,11 @@ void qsmtpdlog(const char *head, const char *result, const char *reason, const c
 void qlogenvelope(char *result, char *reason, char *detail, char *statuscode) { qsmtpdlog("qlogenvelope",result,reason,detail,statuscode); }
 void qlogreceived(char *result, char *reason, char *detail, char *statuscode) { qsmtpdlog("qlogreceived",result,reason,detail,statuscode); }
 
-char* logclean(const char* s);
-void logit(const char* message);
-void logit2(const char* message, const char* reason);
 void flush() { substdio_flush(&ssout); }
 void out(s) char *s; { substdio_puts(&ssout,s); }
 void eflush() { substdio_flush(&sserr); }
 void eout(s) char *s; { substdio_puts(&sserr,s); }
 #define enew()	{ eout("qmail-smtpd["); eout(pid_buf); eout("]: "); }
-
-ssize_t safewrite(fd,buf,len) int fd; char *buf; int len;
-{
-  int r;
-#ifdef TLS
-  if (ssl && fd == ssl_wfd)
-    r = ssl_timeoutwrite(timeout, ssl_rfd, ssl_wfd, ssl, buf, len);
-  else
-#endif
-  r = timeoutwrite(timeout,fd,buf,len);
-  if (r <= 0)
-  {
-     logit("write error (disconnect?): quitting");
-     _exit(1);
-  }
-  return r;
-}
 
 void die_read(char *reason) { logit2("read failed", reason); flush(); _exit(1); }
 void die_alarm() { enew(); eout("connection timed out\n"); eflush(); qlogenvelope("rejected","alarmtimeout","","451"); out("451 timeout (#4.4.2)\r\n"); flush(); _exit(1); }
@@ -1106,12 +1108,23 @@ int checkrcptcount() {
 
 /* logging patch */
 
+static int issafe(ch) char ch;
+{ /* Differs from qsutil.c version: space and % permitted */
+  if (ch == ':') return 0; /* Replace since used as delimiter in logs */
+  if (ch == '<') return 0; /* Replace since used around addresses in logs */
+  if (ch == '>') return 0; /* Replace since used around addresses in logs */
+  if (ch < 32)   return 0; /* Note that space (32) is permitted */
+  if (ch > 126)  return 0;
+  return 1;
+}
+
 char* logclean(s) const char *s;
 {
    int i;
    if (!s) {
       if (!stralloc_copyb(&foo, "(null)", 6)) die_nomem();
-      return &foo;
+      if (!stralloc_0(&foo)) die_nomem();
+      return foo.s;
    }
    while (!stralloc_copys(&foo,s)) die_nomem();
    for (i = 0;i < foo.len;++i)
@@ -1120,7 +1133,8 @@ char* logclean(s) const char *s;
    else
      if (!issafe(foo.s[i]))
        foo.s[i] = '_';
-   return &foo;
+   if (!stralloc_0(&foo)) die_nomem();
+   return foo.s;
 }
 
 void safeloglen(const char* string, const int len) {
@@ -1267,6 +1281,7 @@ void smtp_ehlo(arg) char *arg;
   if (bhelook) flagbarfbhelo = bmcheck(BMCHECK_BHELO);
   if ((!flagbarfbhelo) && (bhelonrok) && (!relayclient)) flagbarfbhelo = bmcheck(BMCHECK_BHELONR);
 }
+
 void smtp_rset(arg) char *arg;
 {
   spp_rset();
@@ -1586,7 +1601,7 @@ void smtp_rcpt(arg) char *arg; {
     }
 
     if ( (rcres == 0) || (rcres == 3) ) {
-      logit2("RCPT check failed");
+      logit("RCPT check failed");
       out(rcptcheck_err); flush();
       if (closesession) {
         _exit(1);

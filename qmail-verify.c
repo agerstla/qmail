@@ -39,9 +39,21 @@
 #include "env.h"
 #include "ip.h"
 #include "qmail-verify.h"
-#include "errbits.h"
 #include "scan.h"
+#include "control.h"
 
+char sserrbuf[512];
+substdio sserr = SUBSTDIO_FDBUF(write,2,sserrbuf,sizeof sserrbuf);
+void eflush() { substdio_flush(&sserr); }
+void eout(s1)  char *s1; { substdio_puts(&sserr,s1); }
+void eout2(s1,s2) char *s1,*s2; { substdio_puts(&sserr,s1);substdio_puts(&sserr,s2); }
+void eout3(s1,s2,s3) char *s1,*s2,*s3; { substdio_puts(&sserr,s1);substdio_puts(&sserr,s2);substdio_puts(&sserr,s3); }
+#define eout4(s1,s2,s3,s4) { eout3(s1,s2,s3); eout(s4); }
+#define eout5(s1,s2,s3,s4,s5) { eout3(s1,s2,s3); eout2(s4,s5); }
+#define eout6(s1,s2,s3,s4,s5,s6) { eout3(s1,s2,s3); eout3(s4,s5,s6); }
+#define eout7(s1,s2,s3,s4,s5,s6,s7) { eout3(s1,s2,s3); eout4(s4,s5,s6,s7); }
+#define eout8(s1,s2,s3,s4,s5,s6,s7,s8) { eout3(s1,s2,s3); eout5(s4,s5,s6,s7,s8); }
+#define eout9(s1,s2,s3,s4,s5,s6,s7,s8,s9) { eout3(s1,s2,s3); eout6(s4,s5,s6,s7,s8,s9); }
 #define enew()  { eout("qmail-verify: "); }
 #define GETPW_USERLEN 32
 #define MAXQUERYSIZE 900
@@ -192,15 +204,15 @@ char *fn;
   if (!addr[at]) { close(fd); return 0; }
 
   if (!stralloc_copys(&key,":")) die_nomem();
-  if (!stralloc_cats(&key,addr + at)) nomem();
+  if (!stralloc_cats(&key,addr + at)) die_nomem();
   case_lowerb(key.s,key.len);
 
   r = cdb_seek(fd,key.s,key.len,&dlen);
   if (r == -1) die_cdb();
   if (r) { close(fd); return 1; }
 
-  if (!stralloc_copys(&key,":")) nomem();
-  if (!stralloc_catb(&key,addr,at + 1)) nomem();
+  if (!stralloc_copys(&key,":")) die_nomem();
+  if (!stralloc_catb(&key,addr,at + 1)) die_nomem();
   case_lowerb(key.s,key.len);
 
   r = cdb_seek(fd,key.s,key.len,&dlen);

@@ -1814,7 +1814,7 @@ qmail-users.9 conf-break conf-spawn
 
 qmail-verify.o: \
 qmail-verify.h compile qmail-verify.c auto_break.h auto_usera.h auto_qmail.h byte.h case.h cdb.h \
-constmap.h error.h fmt.h ip.h open.h str.h stralloc.h uint32.h errbits.h
+constmap.h error.h fmt.h ip.h open.h str.h stralloc.h uint32.h
 	./compile qmail-verify.c
 
 qmail-verify: \
@@ -1822,14 +1822,14 @@ load qmail-verify.o timeoutread.o \
 timeoutwrite.o control.o ip.o constmap.o \
 cdb.a fd.a wait.a getln.a \
 open.a sig.a case.a env.a stralloc.a \
-auto_usera.o auto_break.o auto_qmail.o errbits.o \
+auto_usera.o auto_break.o auto_qmail.o \
 alloc.a substdio.a error.a str.a fs.a \
 socket.lib
 	./load qmail-verify timeoutread.o \
 	timeoutwrite.o control.o ip.o constmap.o \
 	cdb.a fd.a wait.a \
 	getln.a open.a sig.a case.a env.a stralloc.a \
-	auto_usera.o auto_break.o auto_qmail.o errbits.o \
+	auto_usera.o auto_break.o auto_qmail.o \
 	alloc.a substdio.a error.a str.a fs.a `cat \
 	socket.lib`
 

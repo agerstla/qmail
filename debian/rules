@@ -54,7 +54,8 @@ install-arch: deb-checkdir deb-checkuid build-stamp
 	 qmail-qmqpd qmail-qmtpd qmail-qread qmail-queue qmail-remote \
 	 qmail-rspawn qmail-send qmail-showctl qmail-smtpd qmail-start \
 	 qmail-tcpok qmail-tcpto qreceipt qsmhook sendmail splogger tcp-env \
-	 dkim dktest qmail-dk qmail-dkim spawn-filter surblfilter; \
+	 dkim dktest qmail-dk qmail-dkim spawn-filter surblfilter \
+	 qmail-verify srsfilter surblqueue dknewkey qmail-todo spfquery; \
 	  do $(STRIP) -R .comment -R .note '$(DIR)'/var/lib/qmail/bin/$$i \
 	    || exit 1; \
 	done
