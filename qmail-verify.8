@@ -1,0 +1,136 @@
+.TH qmail-verify 8 "Andrew Richards" "28th August 2009" "v1.32"
+.SH NAME
+qmail-verify \- Address verification daemon
+.SH SYNOPSIS
+.B qmail-verify
+.SH DESCRIPTION
+.B qmail-verify
+receives UDP packets containing local email addresses and returns a
+single byte to indicate if the address is valid or invalid to the
+sender of the UDP packet.
+.B qmail-smtpd
+or
+.B qmail-qmtpd
+are typical clients using the
+.B qmail-verify
+service, although at present only
+.B qmail-smtpd
+has had this functionality added.
+.B qmail-verify
+is based on Paul Jarc's
+.B realrcptto
+patch for qmail
+.I (http://code.dogmap.org/qmail/).
+
+.B qmail-verify
+uses the files
+.I control/locals, control/virtualdomains, users/cdb,
+the system password file entries (typically in
+.B /etc/passwd
+) as well as the existence or not of users' home directories and
+.B .qmail[-xxx]
+files to determine if a given address is valid.
+
+Where a qmail system uses
+.B .qmail-default
+files on a per-domain basis in a virtual domains setup, this is
+likely to result in all addresses being considered 'valid'. This
+may not in fact be the case in certain situations, such as with
+extensions/adaptations to qmail like vpopmail which use
+.B .qmail-default
+files throughout (delivery in this case is subsequently handled
+by a vpopmail component). In these cases a replacement for
+.B qmail-verify
+will be required that can determine address validity.
+
+Other customised qmail installations that use different methods
+to locate users' mailboxes are likely to need alternatives to
+.B qmail-verify
+or a modified version of it for address verification.
+
+.SH INVOCATION
+.B qmail-verify
+should be invoked as user
+.I root
+to have sufficient privileges to
+determine the validity of a given address. In certain single-UID
+virtual domains setups, it may be sufficient to run
+.B qmail-verify
+as the single-UID.
+
+By default,
+.B qmail-verify
+listens on localhost (127.0.0.1) on port 11113. This behaviour
+can be changed by setting the environment variable
+.B LISTEN
+to specify the IP address and/or port: Set this to the desired
+IP address, optionally followed by a colon and port, thus for
+example LISTEN="192.168.1.1:10101".
+
+.SH ADDRESS VERIFICATION DETAILS
+.B qmail-verify
+is implemented by taking the various pieces of qmail that parse an
+address and combining them in the same executable,
+.B qmail-verify.
+Thus logic is taken from
+.B qmail-send, qmail-lspawn, qmail-getpw
+and
+.B qmail-local.
+
+.SH "UDP PACKET DETAILS"
+The incoming packet contains just the email address to be checked
+as a string. The string is optionally terminated with a 0 byte.
+
+The response packet contains a single byte to indicate whether the
+address is valid. The lowest-order bit of this byte indicates the
+result:
+.B 0
+for 'valid',
+.B 1
+for 'invalid'. Other bits of this response byte are set by
+.B qmail-verify
+to give further debugging information; these other bits should
+generally be disregarded.
+
+Although not especially designed as a new protocol, extensions to
+.B qmail-verify
+could require the query string to be 0 terminated
+to separate it from other data to follow. Currently the response packet
+contains the response byte and the 'Controlling user'; more
+information could potentially be returned if required.
+
+.SH CONTROL FILES
+At startup
+.B qmail-verify
+reads the following qmail control files:
+.I control/envnoathost, control/locals, control/percenthack, control/virtualdomains.
+If changes are made to any of these files,
+.B qmail-verify
+should be restarted for the changes to take effect in
+.B qmail-verify.
+
+If you are using different machines for
+.B qmail-verify
+and
+.B qmail-smtpd
+you should ensure that the machine providing the
+.B qmail-verify
+service has a full set of control files as well as the mailboxes; the machine
+running
+.B qmail-smtpd
+still needs
+.I control/rcpthosts
+to be setup.
+
+.SH LOGGING
+.B qmail-verify
+logs each decision it makes to stderr: The address followed by whether
+it's valid or not.
+
+.SH AUTHOR
+Andrew Richards, building on the work of Paul Jarc and Dan Bernstein, and with
+plenty of help along the way from Russell Nelson, John Levine and Charles Cazabon
+amongst others.
+
+.SH "SEE ALSO"
+qmail-smtpd(8).
