@@ -21,15 +21,16 @@ qmail-qmqpd
 qmail-qmtpd
 qmail-smtpd
 qmail-verify
+qmail-newmvrt
+qmail-todo
 
-dk-filter
 dkim
 dknewkey
-dktest
 spawn-filter
+srsfilter
 surblfilter
 surblqueue
 update_tmprsadh
+testqmail-dks
 
-qmail-dk
 qmail-dkim

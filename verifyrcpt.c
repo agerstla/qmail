@@ -3,6 +3,8 @@
 #include "ip.h"
 #include "stralloc.h"
 #include "scan.h"
+#include "udpbits.h"
+#include "sockbits.h"
 #include <sys/types.h>
 
 static int verifyrcpt_initialised=0;

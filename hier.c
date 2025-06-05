@@ -181,6 +181,7 @@ void hier()
   c(auto_qmail,"bin","qmail-verify",auto_uido,auto_gidq,0755);
   c(auto_qmail,"bin","srsfilter",auto_uido,auto_gidq,0755);
   c(auto_qmail,"bin","sendmail",auto_uido,auto_gidq,0755);
+  c(auto_qmail,"bin","spfquery",auto_uido,auto_gidq,0755);
   c(auto_qmail,"bin","tcp-env",auto_uido,auto_gidq,0755);
   c(auto_qmail,"bin","qreceipt",auto_uido,auto_gidq,0755);
   c(auto_qmail,"bin","qsmhook",auto_uido,auto_gidq,0755);
