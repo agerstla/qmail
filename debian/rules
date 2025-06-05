@@ -88,6 +88,8 @@ install-arch: deb-checkdir deb-checkuid build-stamp
 	ln -s /usr/lib/qmail/boot '$(DIR)'/var/lib/qmail/boot
 	# control/ is /etc/qmail/
 	mv '$(DIR)'/var/lib/qmail/control/cache '$(DIR)'/etc/qmail/
+	mv '$(DIR)'/var/lib/qmail/control/domainkeys '$(DIR)'/etc/qmail/
+	mv '$(DIR)'/var/lib/qmail/control/notlshosts '$(DIR)'/etc/qmail/
 	rmdir '$(DIR)'/var/lib/qmail/control
 	ln -s /etc/qmail '$(DIR)'/var/lib/qmail/control
 	# policy 10.6, create named pipe in postinst, remove in postrm
