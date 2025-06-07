@@ -248,7 +248,7 @@ void smtp_help(arg) char *arg;
 }
 void smtp_quit(arg) char *arg;
 {
-  logit("rewmote end QUIT: quitting"); 
+  logit("remote end QUIT: quitting");
   smtp_greet("221 "); out("\r\n"); flush(); _exit(0);
 }
 
