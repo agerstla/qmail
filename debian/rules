@@ -81,6 +81,8 @@ install-arch: deb-checkdir deb-checkuid build-stamp
 	for j in `cat debian/scripts`; do \
 	  install -m0755 scripts/$${j} '$(DIR)'/usr/bin/`basename $${j}` || exit 1; \
 	done
+	# cron system-wide
+	dh_installcron --name=rcptcheck-overlimit
 	# docs are in /usr/share/doc/qmail (implicit)
 	rm -rf '$(DIR)'/var/lib/qmail/doc
 	ln -s /usr/share/doc/qmail '$(DIR)'/var/lib/qmail/doc
