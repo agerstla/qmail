@@ -68,6 +68,7 @@ install-arch: deb-checkdir deb-checkuid build-stamp
 	install -d -m0755 '$(DIR)'/etc/qmail
 	install -d -m0755 '$(DIR)'/usr/lib/qmail/bin
 	install -m0755 config-fast '$(DIR)'/usr/lib/qmail/bin/config-fast
+	install -m0755 config-all '$(DIR)'/usr/lib/qmail/bin/config-all
 	# move and link binaries
 	for i in bin sbin; do \
 	  for j in `cat debian/$${i}`; do \
@@ -77,6 +78,9 @@ install-arch: deb-checkdir deb-checkuid build-stamp
 	done;
 	mv -f '$(DIR)'/var/lib/qmail/bin/sendmail '$(DIR)'/usr/sbin/qmail-sendmail
 	ln -s /usr/sbin/qmail-sendmail '$(DIR)'/var/lib/qmail/bin/sendmail
+	for j in `cat debian/scripts`; do \
+	  install -m0755 $${j} '$(DIR)'/usr/bin/$${j} || exit 1; \
+	done
 	# docs are in /usr/share/doc/qmail (implicit)
 	rm -rf '$(DIR)'/var/lib/qmail/doc
 	ln -s /usr/share/doc/qmail '$(DIR)'/var/lib/qmail/doc
