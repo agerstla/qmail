@@ -1,3 +1,5 @@
+VERSION
+README.md
 doc/BLURB
 doc/BLURB2
 doc/BLURB3
@@ -48,5 +50,4 @@ doc/TEST.receive
 doc/THANKS
 doc/THOUGHTS
 doc/UPGRADE
-VERSION
-README.md
+scripts/qmHandle/README.qmHandle.md
