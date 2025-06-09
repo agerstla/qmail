@@ -79,7 +79,7 @@ install-arch: deb-checkdir deb-checkuid build-stamp
 	mv -f '$(DIR)'/var/lib/qmail/bin/sendmail '$(DIR)'/usr/sbin/qmail-sendmail
 	ln -s /usr/sbin/qmail-sendmail '$(DIR)'/var/lib/qmail/bin/sendmail
 	for j in `cat debian/scripts`; do \
-	  install -m0755 $${j} '$(DIR)'/usr/bin/$${j} || exit 1; \
+	  install -m0755 scripts/$${j} '$(DIR)'/usr/bin/$${j} || exit 1; \
 	done
 	# docs are in /usr/share/doc/qmail (implicit)
 	rm -rf '$(DIR)'/var/lib/qmail/doc
