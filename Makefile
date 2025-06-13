@@ -1786,7 +1786,7 @@ substdio.a error.a str.a fs.a auto_qmail.o auto_split.o
 	alloc.a substdio.a error.a str.a fs.a auto_qmail.o auto_split.o
 
 qmail-todo.o: \
-compile alloc.h auto_qmail.h byte.h constmap.h control.h direntry.h error.h \
+compile qmail-todo.c alloc.h auto_qmail.h byte.h constmap.h control.h direntry.h error.h \
 exit.h fmt.h fmtqfn.h getln.h open.h ndelay.h now.h readsubdir.h readwrite.h \
 scan.h select.h str.h stralloc.h substdio.h trigger.h channels.h
 	./compile $(DEFINES) qmail-todo.c
