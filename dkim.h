@@ -146,6 +146,8 @@ typedef struct DKIMVerifyDetails_t {
 	char           *DNS;
 	char           *szSignatureDomain;
 	char           *szIdentityDomain;
+	char           *szSelector;
+/*	char           *szSignatureData;  */
 	char           *szCanonicalizedData;
 	int             nResult;
 } DKIMVerifyDetails;

@@ -1255,14 +1255,21 @@ SelectorInfo &CDKIMVerify::GetSelector(const string &sSelector, const string &sD
 int
 CDKIMVerify::GetDetails(int *nSigCount, DKIMVerifyDetails **pDetails)
 {
+//	static const char *tags[] = { "b", NULL };
+//	char           *values[sizeof (tags) / sizeof (tags[0])] = { NULL };
+
 	Details.clear();
 	for (list < SignatureInfo >::iterator i = Signatures.begin(); i != Signatures.end(); ++i) {
 		DKIMVerifyDetails d;
+//		string sSigValue = i->Header.substr(i->Header.find(':') + 1);
 		d.szSignature = (char *) i->Header.c_str();
 		d.szSignatureDomain = (char*)i->Domain.c_str();
 		d.szIdentityDomain = (char*)i->IdentityDomain.c_str();
 		d.nResult = i->Status;
 		d.szCanonicalizedData = (char *) i->CanonicalizedData.c_str();
+		d.szSelector = (char *) i->Selector.c_str();
+//		if (!ParseTagValueList((char *) sSigValue.c_str(), tags, values)) values[0] = NULL;
+//		d.szSignatureData = values[0];
 		Details.push_back(d);
 	}
 	*nSigCount = Details.size();
