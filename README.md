@@ -3,8 +3,8 @@
 [`qmail`](http://cr.yp.to/qmail.html) is a secure, reliable, efficient, simple message transfer agent. It is designed for typical Internet-connected UNIX hosts.
 It was developed by [D. J. Bernstein](http://cr.yp.to/djb.html).
 
-This is an updated and heavily patched 'netqmail' package for Debian systems.
-It is forked from the "no-chkuser-vpopmail" branch of the 'qmail' repository [maintained by Roberto Puzzanghera](https://github.com/sagredo-dev/qmail).
+This is an updated and heavily patched `netqmail` package for Debian systems.
+It is forked from the `no-chkuser-vpopmail` branch of the `qmail` repository [maintained by Roberto Puzzanghera](https://github.com/sagredo-dev/qmail).
 
 This `qmail` distribution is part of a [complete `qmail` guide](https://notes.sagredo.eu/en/qmail-notes-185/qmail-vpopmail-dovecot-roberto-s-qmail-notes-8.html).
 Not everything you need to know about `qmail` or its installation is covered here so, in case of issues in the installation, have a look at the link above.
