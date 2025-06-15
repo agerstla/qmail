@@ -1293,8 +1293,8 @@ main(int argc, char *argv[])
 				}
 				if (!nSigCount)
 					ret = DKIM_NO_SIGNATURES;
-				else
-					updateAuthenticated(ret, nSigCount, pDetails);
+				// else
+				updateAuthenticated(ret, nSigCount, pDetails);
 			}
 
 			/*- what to do if DKIM Verification fails */
