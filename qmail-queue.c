@@ -129,8 +129,10 @@ char *s;
  if(*e) {
   i = fmt_str(s,";\n\t"); len += i; if (s) s += i;
   i = fmt_str(s,e); len += i; if (s) s += i;
+  i = fmt_str(s,"\n"); len += i; if (s) s += i;
+ } else {
+  i = fmt_str(s,"; none\n"); len += i; if (s) s += i;
  }
- i = fmt_str(s,"\n"); len += i; if (s) s += i;
  return len;
 }
 

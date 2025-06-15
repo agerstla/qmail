@@ -736,36 +736,37 @@ dkim_hdr(stralloc *s, int ret, char** status)
 	{
 	case DKIM_SUCCESS:			/*- 0 */ /*- A */
 		if (status) *status = "good        ";
-		if (!stralloc_cats(s, "pass")) return (char *) 0;
+		if (status)  if (!stralloc_cats(s, "good")) return (char *) 0;
+		if (!status) if (!stralloc_cats(s, "pass")) return (char *) 0;
 		return "X.7.0";
 	case DKIM_FINISHED_BODY:	/*- 1 process result: no more message body is needed */
 		dkimStatus = "process result: no more message body is needed";
-		dkimResult = "neutral";
+		dkimResult = status? "good" : "neutral";
 		code = "X.7.0";
 		break;
 	case DKIM_PARTIAL_SUCCESS:	/*- 2 verify result: at least one but not all signatures verified */
 		dkimStatus = "verify result: at least one but not all signatures verified";
-		dkimResult = "pass";
+		dkimResult = status? "good" : "neutral";
 		code = "X.7.0";
 		break;
 	case DKIM_NEUTRAL:			/*- 3 verify result: no signatures verified but message is not suspicious */
 		dkimStatus = "verify result: no signatures verified but message is not suspicious";
-		dkimResult = "policy";
+		dkimResult = status? "no signatures" : "policy";
 		code = "X.7.0";
 		break;
 	case DKIM_SUCCESS_BUT_EXTRA:/*- 4 signature result: signature verified but it did not include all of the body */
 		dkimStatus = "signature result: signature verified but it did not include all of the body";
-		dkimResult = "neutral";
+		dkimResult = status? "good" : "neutral";
 		code = "X.7.0";
 		break;
 	case DKIM_FAIL:				/*- -1 */ /*- F */
 		dkimStatus = "DKIM Signature verification failed";
-		dkimResult = "fail";
+		dkimResult = status? "bad" : "fail";
 		code = "X.7.0";
 		break;
 	case DKIM_BAD_SYNTAX:		/*- -2 */ /*- G */
 		dkimStatus = "signature error: DKIM-Signature could not parse or has bad tags/values";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.5";
 		break;
 	case DKIM_SIGNATURE_BAD:	/*- -3 */
@@ -774,7 +775,7 @@ dkim_hdr(stralloc *s, int ret, char** status)
 #else
 		dkimStatus = "signature error: RSA verify failed";
 #endif
-		dkimResult = "fail";
+		dkimResult = status? "bad" : "fail";
 		code = "X.7.5";
 		break;
 	case DKIM_SIGNATURE_BAD_BUT_TESTING:
@@ -783,82 +784,82 @@ dkim_hdr(stralloc *s, int ret, char** status)
 #else
 		dkimStatus = "signature error: RSA verify failed but testing";
 #endif
-		dkimResult = "neutral";
+		dkimResult = status? "non-participant" : "neutral";
 		code = "X.7.5";
 		break;
 	case DKIM_SIGNATURE_EXPIRED:
 		dkimStatus = "signature error: x= is old";
-		dkimResult = "permerror";
+		dkimResult = status? "revoked" : "permerror";
 		code = "X.7.5";
 		break;
 	case DKIM_SELECTOR_INVALID:
 		dkimStatus = "signature error: selector doesn't parse or contains invalid values";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.5";
 		break;
 	case DKIM_SELECTOR_GRANULARITY_MISMATCH:
 		dkimStatus = "signature error: selector g= doesn't match i=";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.5";
 		break;
 	case DKIM_SELECTOR_KEY_REVOKED:
 		dkimStatus = "signature error: selector p= empty";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.5";
 		break;
 	case DKIM_SELECTOR_DOMAIN_NAME_TOO_LONG:
 		dkimStatus = "signature error: selector domain name too long to request";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.0";
 		break;
 	case DKIM_SELECTOR_DNS_TEMP_FAILURE:
 		dkimStatus = "signature error: temporary dns failure requesting selector";
-		dkimResult = "temperror";
+		dkimResult = status? "no key" : "temperror";
 		code = "X.7.0";
 		break;
 	case DKIM_SELECTOR_DNS_PERM_FAILURE:
 		dkimStatus = "signature error: permanent dns failure requesting selector";
-		dkimResult = "permerror";
+		dkimResult = status? "no key" : "permerror";
 		code = "X.7.0";
 		break;
 	case DKIM_SELECTOR_PUBLIC_KEY_INVALID:
 		dkimStatus = "signature error: selector p= value invalid or wrong format";
-		dkimResult = "permerror";
+		dkimResult = status? "no key" : "permerror";
 		code = "X.7.5";
 		break;
 	case DKIM_NO_SIGNATURES:
 		dkimStatus = "no signatures";
-		dkimResult = "none";
+		dkimResult = status? "no signature" : "none";
 		code = "X.7.5";
 		break;
 	case DKIM_NO_VALID_SIGNATURES:
 		dkimStatus = "no valid signatures";
-		dkimResult = "none";
+		dkimResult = status? "no signature" : "none";
 		code = "X.7.5";
 		break;
 	case DKIM_BODY_HASH_MISMATCH:
 		dkimStatus = "signature verify error: message body does not hash to bh value";
-		dkimResult = "fail";
+		dkimResult = status? "bad" : "fail";
 		code = "X.7.7";
 		break;
 	case DKIM_SELECTOR_ALGORITHM_MISMATCH:
 		dkimStatus = "signature error: selector h= doesn't match signature a=";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.7";
 		break;
 	case DKIM_STAT_INCOMPAT:
 		dkimStatus = "signature error: incompatible v=";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.7.6";
 		break;
 	case DKIM_UNSIGNED_FROM:
 		dkimStatus = "signature error: not all message's From headers in signature";
-		dkimResult = "policy";
+		dkimResult = status? "bad format" : "policy";
 		code = "X.7.7";
 		break;
 	default:
 		dkimStatus = "error";
-		dkimResult = "permerror";
+		dkimResult = status? "bad format" : "permerror";
 		code = "X.3.0";
 		break;
 	}
@@ -1293,9 +1294,8 @@ main(int argc, char *argv[])
 				}
 				if (!nSigCount)
 					ret = DKIM_NO_SIGNATURES;
-				// else
-				updateAuthenticated(ret, nSigCount, pDetails);
 			}
+			updateAuthenticated(ret, nSigCount, pDetails);
 
 			/*- what to do if DKIM Verification fails */
 			if (checkPractice(ret, useADSP, useSSP)) {

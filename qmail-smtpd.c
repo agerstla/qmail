@@ -1844,7 +1844,7 @@ void spfauthenticated()
   if (!spfbehavior || relayclient) return;
 
   e = env_get("QMAILAUTHENTICATED");
-  if(e) {
+  if(e && *e) {
      if (!stralloc_copys(&auth_spf, e)) die_nomem();
      if (!stralloc_cats(&auth_spf, ";\n\tspf=")) die_nomem();
   } else {
