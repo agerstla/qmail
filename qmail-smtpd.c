@@ -1652,7 +1652,7 @@ void smtp_rcpt(arg) char *arg; {
     rcptcount++;
     if (checkrcptcount() == 1) { err_maxrcpt(); return; }
     if (flagrcptmatch == 1) { qlogenvelope("accepted","rcptto","validrcptto","250"); }
-    if (flagrcptmatch == 2) { qlogenvelope("accepted","rcptto","verify","250"); }
+    else if (flagrcptmatch == 2) { qlogenvelope("accepted","rcptto","verify","250"); }
     else if (flagrcptmatch == 4) { qlogenvelope("accepted","rcptto","rcptcheck","250"); }
     else {
       if (relayclient) { qlogenvelope("accepted","relayclient","","250"); }
