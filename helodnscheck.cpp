@@ -1,4 +1,4 @@
-/* helodnscheck.cpp - version 9.0.2 */
+/* helodnscheck.cpp - version 10.0.1 */
 
 /*
 * Copyright (C) 2007 Jason Frisvold <friz@godshell.com>
@@ -27,12 +27,12 @@
   if the TCPREMOTEIP variable (mostly set by tcpserver) match
   any of the IP addresses the HELO resolves to.
 
-  (2022 v.7) Roberto Puzzanghera https://notes.sagredo.eu
+  (2022 v.7) Roberto Puzzanghera https://www.sagredo.eu
   Deny HELOs containing one of our domains, when RELAYCLIENT is
   not defined. In addition, it is now possible to deny only not solving
   hosts in HELO/EHLO.
 
-  (Aug 2023, v. 9) Roberto Puzzanghera https://notes.sagredo.eu
+  (Aug 2023, v. 9) Roberto Puzzanghera https://www.sagredo.eu
   Code revision.
   Added G filter for HELO/EHLO with malformed syntax (mostly random strings).
   I filter copied to A. V filter copied to N.
@@ -85,15 +85,15 @@
   Note: If there is no HELO/EHLO argument, it defaults to GNLR
 
   Compile as follows:
-  g++ -o /var/qmail/plugins/helodnscheck helodnscheck.cpp -lpcre
+  g++ -o /var/qmail/plugins/helodnscheck helodnscheck.cpp
   or, on freeBSD/clang:
-  clang++ -o /var/qmail/plugin/helodnscheck helodnscheck.cpp -lpcre -I/usr/local/include -L/usr/local/lib
+  clang++ -o /var/qmail/plugin/helodnscheck helodnscheck.cpp
 
   Test as follows:
   SMTPHELOHOST="test.tld" TCPREMOTEIP="1.2.3.4" HELO_DNS_CHECK="BLRD" ./helodnscheck
 
   More info here:
-  https://notes.sagredo.eu/en/qmail-notes-185/denying-bad-dns-heloehlos-255.html
+  https://www.sagredo.eu/en/qmail-notes-185/denying-bad-dns-heloehlos-255.html
 ************************************************************************************/
 
 #include <arpa/inet.h>
@@ -102,15 +102,15 @@
 #include <sys/socket.h>
 #include <cstring>
 #include <iostream>
+#include <regex>
 #include <netdb.h>
-#include <pcre.h>
+#include <pwd.h>
 #include <resolv.h>
 #include <sstream>
 #include <string>
 using namespace std;
 
 char default_action[] = "GNLR";
-const char *qmaildir = "/var/qmail";
 
 char dns_answer[1023];
 char *addr;
@@ -168,34 +168,19 @@ int my_exit(int fail, FILE *fp)
 /***************************************************
   Check if the HELO/EHLO hostname has a valid syntax
 
-  @return PCRE_ERROR_NOMATCH (-1): no match found
-                                0: match found
-                              <-1: regex error
+  @return false: no match found
+           true: match found
  ***************************************************/
-int valid_domain(const char *domain)
+bool valid_domain(const string &str)
 {
-  // regex grabbed from
-  // https://www.geeksforgeeks.org/how-to-validate-a-domain-name-using-regular-expression/
-  // tld length increased to 12 (.amsterdam found)
-  const char *regex = "^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\\.)+[A-Za-z]{2,12}$";
+  // Regex to check valid Domain Name
+  static const regex pattern(
+    R"(^(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}\.?$)"
+  );
 
-  pcre *re;
-  const char *error;
-  int erroffset;
-  int rc;
-  int ovector[30];
-
-  re = pcre_compile(regex, 0, &error, &erroffset, NULL);
-  rc = pcre_exec(re, NULL, domain, strlen(domain), 0, 0, ovector, 30);
-  pcre_free(re);
-
-  if (erroffset > 0) {
-    s << "pcre error: "<<error<<". offset: "<<erroffset;
-    out(s);
-  }
-  return rc;
+  // Return true if the string matches the regex
+  return regex_match(str, pattern);
 }
-
 
 /*****************************************************************************
  Search a string in a file.
@@ -203,7 +188,8 @@ int valid_domain(const char *domain)
 
  @return  0: match not found
           1: match found
-         -1: file does not exist
+         -1: file does not exist/error
+         -2: qmaild user not found
  *****************************************************************************/
 int search_in_file(char *str) {
   FILE *fp;
@@ -211,7 +197,11 @@ int search_in_file(char *str) {
   char temp [512];
   char my_file[256];
 
-  snprintf(my_file, 256, "%s/control/moreipme", qmaildir);
+  // get the qmail dir as the home dir of user 'qmaild'
+  struct passwd* pw = getpwnam("qmaild");
+  if (pw == nullptr) return -2;
+
+  snprintf(my_file, 256, "%s/control/moreipme", pw->pw_dir);
   if ((fp = fopen(my_file, "r")) == NULL) return my_exit(-1, fp);
 
   while (fgets(temp, sizeof(temp), fp) != NULL) {
@@ -378,10 +368,9 @@ int main() {
     injected by G
    ********************************************************/
   if (garbage || block || notsolving) {
-    int nomatch = valid_domain(helo_domain);
+    bool nomatch = valid_domain(helo_domain);
     if (debug) {s << "G filter 'nomatch': ["<<nomatch<<"]"; out(s,true);}
-    if (nomatch < -1 && log) out("regex error");
-    else if (nomatch == PCRE_ERROR_NOMATCH) {
+    if (!nomatch) {
       if (log) {s << "malformed HELO/EHLO ["<<helo_domain<<"]"<<" from ["<<remote_ip<<"]"; out(s);}
       if (!pass) {
         block_permanent("malformed HELO/EHLO hostname", remote_ip);
@@ -401,7 +390,7 @@ int main() {
   /*********************************************************************************
     check if any A record is present, not necessarily having TCPREMOTEIP
     in the address resolved.
-    injected by A or I
+    injected by A
    *********************************************************************************/
   if (!result) {
     out("no result in A record");
@@ -451,7 +440,8 @@ int main() {
         return 0;
       }
     }
-    else if(matched==-1 && log) {s<<"file "<<qmaildir<<"/control/moreipme not found"; out(s);}
+    else if(matched==-1 && log) {s<<"file control/moreipme not found"; out(s);}
+    else if(matched==-2 && log) {s<<"qmaild user not found"; out(s);}
   }
   /****************************************************************************/
 

@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "sig.h"
 #include "readwrite.h"
 #include "stralloc.h"
@@ -246,7 +248,7 @@ void smtp_greet(code) char *code;
 }
 void smtp_help(arg) char *arg;
 {
-  out("214 netqmail home page: http://qmail.org/netqmail\r\n");
+  out("214 Roberto's qmail notes home page: https://www.sagredo.eu\r\n");
 }
 void smtp_quit(arg) char *arg;
 {
@@ -1334,12 +1336,14 @@ void smtp_mail(arg) char *arg;
 /* rejectnullsenders: end */
   flagsize = 0;
   mailfrom_parms(arg);
+
   if (flagsize) {
      logit("exceeded datasize limit");
      err_size();
      return;
   }
   if (!(spp_val = spp_mail())) return;
+
 /* qregex: start */
   flagbarfbmf = 0;
   if (spp_val == 1) {
@@ -1360,7 +1364,7 @@ void smtp_mail(arg) char *arg;
 
   flagbarfspf = 0;
   if (spfbehavior && !relayclient)
-   { 
+   {
     switch(r = spfcheck(remoteip4)) {
     case SPF_OK: env_put2("SPFRESULT","pass"); break;
     case SPF_NONE: env_put2("SPFRESULT","none"); break;
@@ -1394,8 +1398,7 @@ void smtp_mail(arg) char *arg;
       flagbarfspf = 1;
     }
    }
-  else
-   env_unset("SPFRESULT");
+  else env_unset("SPFRESULT");
 
   if (spp_val != 1) flagbarfspf = 0;
 
@@ -1431,7 +1434,7 @@ void smtp_rcpt(arg) char *arg; {
   int flagrcptmatch = 0; /* 0 undefined, 1 validrcptto, 2 verify, 4 rcptcheck */
 /* added by empf patch */
   int ret = 0;
-/* end of empf pacth  */
+/* end of empf patch  */
   envelopepos = 3;
   if (!seenmail) { err_wantmail(); return; }
   if (!addrparse(arg)) { err_syntax("RCPT with too long address"); return; }
@@ -1471,7 +1474,6 @@ void smtp_rcpt(arg) char *arg; {
   if (!relayclient) allowed = addrallowed();
   else allowed = 1;
   if (!(spp_val = spp_rcpt(allowed))) return;
-
   if (flagbarfspf) { qlogenvelope("rejected","spf",env_get("SPFRESULT"),"550"); err_spf(); return; }
 
 /* dnsbl: start */
@@ -1628,15 +1630,14 @@ void smtp_rcpt(arg) char *arg; {
   if ((rblok) && !(relayclient || seenauth || dnsblskip || flagrbldns)) {
     flagrbldns = 1;
     switch(rblcheck()) {
-    case -1: env_put2("RBLRESULT","ignore"); break;
-    case 0: env_put2("RBLRESULT","pass"); break;
-    case 1: env_put2("RBLRESULT","accept"); break;
-    case 2: env_put2("RBLRESULT","delay"); break;
-    case 3: env_put2("RBLRESULT","reject"); break;
+      case -1: env_put2("RBLRESULT","ignore"); break;
+      case 0: env_put2("RBLRESULT","pass"); break;
+      case 1: env_put2("RBLRESULT","accept"); break;
+      case 2: env_put2("RBLRESULT","delay"); break;
+      case 3: env_put2("RBLRESULT","reject"); break;
     }
   }
-  else
-    env_unset("RBLRESULT");
+  else env_unset("RBLRESULT");
   if (rbldecision >= 2) {
     if (!stralloc_ready(&rblmessage,0)) die_nomem();
     if (flagmustnotbounce || (rbldecision == 2)) {
@@ -2526,7 +2527,10 @@ void qsmtpdlog(const char *head, const char *result, const char *reason, const c
 
   substdio_puts(&sslog, " authuser="); if (user.len) outsqlog(user.s);
   substdio_puts(&sslog, " authtype="); x = env_get("SMTPAUTHMETHOD"); if (x) outsqlog(x);
-  substdio_puts(&sslog, " encrypted="); if (smtps) outsqlog("ssl"); else if (flagtls) outsqlog("tls");
+  substdio_puts(&sslog, " encrypted=");
+#ifdef TLS
+  if (smtps) outsqlog("ssl"); else if (flagtls) outsqlog("tls");
+#endif
 
   substdio_puts(&sslog, " sslverified=");
 #ifdef TLS

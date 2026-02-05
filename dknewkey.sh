@@ -19,7 +19,7 @@ usage()
 # split a long string into multiple strings
 # of length 255 or less.
 # Credits: J
-# See https://notes.sagredo.eu/en/qmail-notes-185/configuring-dkim-for-qmail-92.html#comment2961
+# See https://www.sagredo.eu/en/qmail-notes-185/configuring-dkim-for-qmail-92.html#comment2961
 split_str()
 {
 	local INPUT="$1"
@@ -137,7 +137,7 @@ while :; do
 		grep -w "$2" $controldir/rcpthosts $controldir/me >/dev/null 2>&1
 	fi
 	if [ $? -ne 0 ] ; then
-		echo "$domain not in rcpthosts or bouncehost/me" 1>&2
+		echo "$2 not in rcpthosts or bouncehost/me" 1>&2
 		exit 1
 	fi
 	domain="$2"

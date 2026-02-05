@@ -258,6 +258,10 @@ case_lowers.o: \
 compile case_lowers.c case.h
 	./compile case_lowers.c
 
+case_startb.o: \
+compile case_startb.c case.h
+	./compile case_startb.c
+
 case_starts.o: \
 compile case_starts.c case.h
 	./compile case_starts.c
@@ -1918,6 +1922,10 @@ scan_ulong.o: \
 compile scan_ulong.c scan.h
 	./compile scan_ulong.c
 
+scan_xlong.o: \
+compile scan_xlong.c scan.h
+	./compile scan_xlong.c
+
 seek.a: \
 makelib seek_cur.o seek_end.o seek_set.o seek_trunc.o
 	./makelib seek.a seek_cur.o seek_end.o seek_set.o \
@@ -2396,6 +2404,7 @@ compile str.h str_cspn.c
 
 mess822_ok.o: \
 compile mess822_ok.c uint64.h
+	./compile mess822_ok.c
 
 surblfilter.0: surblfilter.8
 	nroff -man surblfilter.8 > surblfilter.0
@@ -2500,7 +2509,8 @@ libdkim.a: $(DKIMOBJS) dkimverify.o dkimsign.o makelib time_t_size.h
 .cpp.o:
 	c++ -g -I. -DHAVE_EVP_SHA256 $(CFLAGS) $(INCL) -c $<
 
-cert cert-req: Makefile-cert @$(MAKE) -sf $< $@
+cert cert-req: Makefile-cert
+	@$(MAKE) -sf $< $@
 
 Makefile-cert: \
 conf-qmail conf-users conf-groups Makefile-cert.mk
@@ -2528,6 +2538,4 @@ policy.o: policy.c policy.h conf-policy conf-qmail
 	./compile policy.c `head -n 1 conf-policy.temp`
 
 helodnscheck: helodnscheck.cpp
-	c++ -o helodnscheck helodnscheck.cpp -lpcre \
-        -I/usr/local/include -I/usr/pkg/include \
-        -L/usr/local/lib -L/usr/pkg/lib
+	c++ -o helodnscheck helodnscheck.cpp

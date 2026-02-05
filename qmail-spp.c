@@ -28,7 +28,6 @@
  * added, if needed.
  *
  */
-
 #include "readwrite.h"
 #include "stralloc.h"
 #include "substdio.h"
@@ -182,7 +181,6 @@ int spp(plugins, addrenv) stralloc *plugins; char *addrenv;
     if (wait_pid(&wstat,pid) == -1) { err_spp(plugins->s + i, "wait_pid() failed"); return 0; }
     if (wait_crashed(wstat)) { err_spp(plugins->s + i, "child crashed"); return 0; }
     if (wait_exitcode(wstat) == 120) { err_spp(plugins->s + i, "can't execute"); return 0; }
-
     if (last)
       switch (*data.s) {
         case 'E': return 0;
@@ -193,7 +191,6 @@ int spp(plugins, addrenv) stralloc *plugins; char *addrenv;
         case 'D': flush(); _exit(0);
       }
   }
-
   return 1;
 }
 
