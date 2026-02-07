@@ -1,3 +1,11 @@
+netqmail (1.06-7.1.amg1) UNRELEASED; urgency=medium
+
+  * Non-maintainer upload.
+  * Upgraded to v2026.02.03 from https://github.com/sagredo-dev/qmail
+    This includes fixes for DKIM verification handling
+
+ -- Andreas Gerstlauer <amg@li89-79.members.linode.com>  Sat, 07 Feb 2026 17:29:52 +0000
+
 netqmail (1.06-7.amg1) UNRELEASED; urgency=medium
 
   * Non-maintainer upload.
