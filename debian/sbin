@@ -26,6 +26,7 @@ qmail-todo
 
 dkim
 dknewkey
+qmail-qfilter
 spawn-filter
 srsfilter
 surblfilter
