@@ -62,6 +62,7 @@ qmail-upq
 qmail-showctl
 qmail-newu
 qmail-pw2u
+qmail-qfilter
 qmail-qread
 qmail-qstat
 qmail-tcpto
@@ -74,6 +75,7 @@ qmail-qmqpc
 qmail-qmqpd
 qmail-qmtpd
 qmail-smtpd
+qmail-verify
 # scripts/example-supervise/supervise/qmail-smtpd dir must be included
 !qmail-smtpd/
 sendmail
@@ -141,6 +143,7 @@ qmail-newu.8
 qmail-newu.0
 qmail-pw2u.8
 qmail-pw2u.0
+qmail-qfilter.0
 qmail-qread.0
 qmail-qstat.0
 qmail-tcpto.0
@@ -151,6 +154,7 @@ qmail-qmqpc.0
 qmail-qmqpd.0
 qmail-qmtpd.0
 qmail-smtpd.0
+qmail-verify.0
 tcp-env.0
 qmail-newmrh.8
 qmail-newmrh.0
