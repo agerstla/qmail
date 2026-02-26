@@ -214,3 +214,5 @@ conf-policy.temp
 unittest_stralloc
 qtmp.h
 helodnscheck
+qmail-qfilter
+qmail-qfilter.0
