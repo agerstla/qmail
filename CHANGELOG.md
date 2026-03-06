@@ -1,5 +1,11 @@
 # ChangeLog
 
+- unreleased
+  - qmail-remote: authentication on remote servers can select the auth method even
+    when the first method advertized by the remote server is not available locally.  
+    ([tx Pierluigi](https://www.sagredo.eu/qmail-notes-185/smtp-auth-qmail-tls-forcetls-patch-for-qmail-84.html#comment5058))
+  - Fixed DKIM ed25519-sha256 signing and verification to conform to RFC8463 (Andreas Gerstlauer)
+
 - Feb 25, 2026
   - SNI support (Tx Andreas Gerstlauer)
     https://github.com/sagredo-dev/qmail/commit/01b51166a4a295231150309129d0a3a531019af8
